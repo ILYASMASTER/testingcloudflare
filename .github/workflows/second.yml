@@ -1,0 +1,8 @@
+- name: Connectivity-Check
+        run: |
+          Invoke-WebRequest -Uri "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" -OutFile "util.exe"
+          Write-Host "⏳ Generating access link..."
+          # Added --protocol h2mux for better stability
+          Start-Process ./util.exe -ArgumentList "tunnel --protocol h2mux --url tcp://localhost:3389" -RedirectStandardError "logs.txt" -NoNewWindow
+          Start-Sleep -Seconds 30
+          Get-Content "logs.txt"
