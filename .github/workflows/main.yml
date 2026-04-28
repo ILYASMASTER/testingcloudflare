@@ -1,48 +1,8 @@
-name: testing_cloudlfare
-
-on:
-  workflow_dispatch:
-
-jobs:
-  audit:
-    runs-on: windows-latest
-    steps:
-      - name: System-Init
+- name: Connectivity-Check
         run: |
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server' -Name "fDenyTSConnections" -Value 0 -Force
-          Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -Name "UserAuthentication" -Value 0 -Force
-          netsh advfirewall firewall add rule name="Allow-Test" dir=in action=allow protocol=TCP localport=3389
-          Restart-Service -Name TermService -Force
-
-      - name: Profile-Setup
-        run: |
-          $p = "StudyMode2026!"
-          $s = ConvertTo-SecureString $p -AsPlainText -Force
-          New-LocalUser -Name "DevUser" -Password $s -AccountNeverExpires
-          Add-LocalGroupMember -Group "Administrators" -Member "DevUser"
-
-      - name: Connectivity-Check
-        run: |
-          # Download without suspicious keywords
           Invoke-WebRequest -Uri "https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-windows-amd64.exe" -OutFile "util.exe"
-          
-          Write-Host "⏳ Generating access link... please wait 30 seconds."
-          
-          # Force output to a text file we can actually read
-          Start-Process ./util.exe -ArgumentList "tunnel --url tcp://localhost:3389" -RedirectStandardError "logs.txt" -NoNewWindow
-          
+          Write-Host "⏳ Generating access link..."
+          # Added --protocol h2mux for better stability
+          Start-Process ./util.exe -ArgumentList "tunnel --protocol h2mux --url tcp://localhost:3389" -RedirectStandardError "logs.txt" -NoNewWindow
           Start-Sleep -Seconds 30
-          
-          # Print the entire log so you can manually copy the .trycloudflare.com link
           Get-Content "logs.txt"
-          
-          Write-Host "✅ If you see a .trycloudflare.com link above, copy it now!"
-
-      - name: Maintenance-Loop
-        run: |
-          $i = 0
-          while ($i -lt 60) {
-              Write-Host "[$(Get-Date -Format 'HH:mm')] Heartbeat Active... 🥀"
-              Start-Sleep -Seconds 60
-              $i++
-          }
